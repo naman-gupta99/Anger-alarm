@@ -29,35 +29,60 @@ while True:
   if flag:
     r_image = img
     flag = False
-  cv2.namedWindow('image', cv2.WINDOW_NORMAL)
+  # cv2.namedWindow('image', cv2.WINDOW_NORMAL)
 
   gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
   faces_detected = face_haar_cascade.detectMultiScale(gray_img, 1.1, 6, minSize=(150, 150))
 
-  for (x, y, w, h) in faces_detected:
-      cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), thickness=2)
-      roi_gray = gray_img[y:y + w, x:x + h]
-      roi_gray = cv2.resize(roi_gray, (48, 48))
-      img_pixels = image.img_to_array(roi_gray)
-      img_pixels = np.expand_dims(img_pixels, axis=0)
-      img_pixels /= 255.0
+  if len(faces_detected) != 0:
+    for (x, y, w, h) in faces_detected:
+        cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), thickness=2)
+        cv2.putText(img, 'Press q to exit', (0,15), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2)
+        roi_gray = gray_img[y:y + w, x:x + h]
+        roi_gray = cv2.resize(roi_gray, (48, 48))
+        img_pixels = image.img_to_array(roi_gray)
+        img_pixels = np.expand_dims(img_pixels, axis=0)
+        img_pixels /= 255.0
 
-      predictions = model.predict(img_pixels)
-      max_index = int(np.argmax(predictions))
+        predictions = model.predict(img_pixels)
+        max_index = int(np.argmax(predictions))
 
-      emotions = ['neutral', 'happiness', 'surprise', 'sadness', 'anger', 'disgust', 'fear']
-      predicted_emotion = emotions[max_index]
+        emotions = ['neutral', 'happiness', 'surprise', 'sadness', 'anger', 'disgust', 'fear']
+        predicted_emotion = emotions[max_index]
 
-      if max_index in {3, 4, 5, 6}:
-        c_time= time.time()
-        print(predicted_emotion)
-        if c_time - curr_time > 1.5:
-          threading.Thread(target=ws.PlaySound, args=('SystemHand', ws.SND_ALIAS), daemon=True).start()
-          curr_time = c_time
-      cv2.putText(img, predicted_emotion, (int(x), int(y)), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2)
+        if max_index in {3, 4, 5, 6}:
+          c_time= time.time()
+          print(predicted_emotion)
+          if c_time - curr_time > 5.0:
+            threading.Thread(target=ws.PlaySound, args=('alert.wav', ws.SND_FILENAME), daemon=True).start()
+            curr_time = c_time
+        cv2.putText(img, predicted_emotion, (int(x), int(y)), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2)
       
-      resized_img = cv2.resize(img, (1000, 700))
-      cv2.imshow('Facial Emotion Recognition', resized_img)
+        resized_img = cv2.resize(img, (1000, 700))
+        cv2.imshow('Facial Emotion Recognition', resized_img)
+
+  else:
+    gray_img = cv2.resize(gray_img, (48, 48))
+    img_pixels = image.img_to_array(gray_img)
+    img_pixels = np.expand_dims(img_pixels, axis=0)
+    img_pixels /= 255.0
+    cv2.putText(img, 'Press q to exit', (0,15), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2)
+
+    predictions = model.predict(img_pixels)
+    max_index = int(np.argmax(predictions))
+
+    emotions = ['neutral', 'happiness', 'surprise', 'sadness', 'anger', 'disgust', 'fear']
+    predicted_emotion = emotions[max_index]
+
+    if max_index == 4:
+      c_time= time.time()
+      print(predicted_emotion)
+      if c_time - curr_time > 10.0:
+        threading.Thread(target=ws.PlaySound, args=('alert.wav', ws.SND_FILENAME), daemon=True).start()
+        curr_time = c_time
+
+    resized_img = cv2.resize(img, (1000, 700))
+    cv2.imshow('Facial Emotion Recognition', resized_img) 
       
   if cv2.waitKey(1) & 0xFF == ord('q'):
     break
